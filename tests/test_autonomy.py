@@ -30,6 +30,8 @@ def test_kalman_update():
     z = [0.0, 0.0, 100.0, 0.0, 0.0, -50.0]
     kf.update(z)
     assert kf.x[2] != 0.0
+    assert kf.covariance_trace < 9 * 100.0
+    assert kf.innovation_consistency
 
 
 def test_kalman_state():
