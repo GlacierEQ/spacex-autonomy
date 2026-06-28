@@ -3,6 +3,15 @@
 Fuses accelerometer, gyroscope, and GPS into continuous state estimate.
 Handles sensor dropouts and outlier rejection.
 Pure math, zero external dependencies.
+
+The Kalman filter was invented in 1960 by Rudolf Kálmán.
+It put a man on the moon.
+It lands rockets on drone ships.
+It guides missiles.
+It tracks Santa Claus every December (NORAD uses it).
+
+It is, arguably, the most important algorithm of the 20th century.
+And it fits in 100 lines of Python.
 """
 
 import math
