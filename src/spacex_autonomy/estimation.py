@@ -88,7 +88,9 @@ class AlphaBetaEstimator:
             position_gain = self.policy.alpha * confidence
             velocity_gain = self.policy.beta * confidence
             self._position_m = predicted_position + position_gain * innovation
-            self._velocity_mps = predicted_velocity + velocity_gain * innovation / dt
+            self._velocity_mps = (
+                predicted_velocity + velocity_gain * innovation / dt
+            )
         else:
             self._position_m = predicted_position
             self._velocity_mps = predicted_velocity
