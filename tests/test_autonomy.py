@@ -78,3 +78,17 @@ def test_invalid_threshold_order_is_rejected() -> None:
     policy = ModePolicy(manual_enter=0.6, manual_exit=0.5)
     with pytest.raises(AutonomyInputError, match="mode thresholds"):
         select_mode(Sensors(0.5, 0.5, 0.5, 0.5), policy=policy)
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        ModePolicy(manual_enter=True),
+        ModePolicy(manual_exit="0.5"),  # type: ignore[arg-type]
+        ModePolicy(auto_exit=math.nan),
+        ModePolicy(auto_enter=math.inf),
+    ],
+)
+def test_invalid_threshold_types_and_values_are_rejected(policy: ModePolicy) -> None:
+    with pytest.raises(AutonomyInputError):
+        select_mode(Sensors(0.5, 0.5, 0.5, 0.5), policy=policy)
