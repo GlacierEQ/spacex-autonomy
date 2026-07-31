@@ -3,7 +3,11 @@ __pycache__/
 *.pyo
 .Python
 *.egg-info/
+.pytest_cache/
+.ruff_cache/
+artifacts/
 dist/
 build/
-.git
+coverage.xml
+htmlcov/
 .shadow_infrastructure/file_hashes.json
