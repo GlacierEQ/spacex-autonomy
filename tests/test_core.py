@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 import pytest
 
@@ -69,6 +70,19 @@ def test_estimator_requires_monotonic_time() -> None:
         estimator.update(sample(1.0, 1.0))
 
 
+@pytest.mark.parametrize(
+    "policy",
+    [
+        EstimatorPolicy(alpha=math.nan),
+        EstimatorPolicy(beta=math.inf),
+        EstimatorPolicy(maximum_innovation_m=math.nan),
+    ],
+)
+def test_estimator_policy_rejects_non_finite_values(policy: EstimatorPolicy) -> None:
+    with pytest.raises(SimulationInputError, match="must be finite"):
+        AlphaBetaEstimator(policy)
+
+
 def test_controller_is_bounded_and_can_be_disabled() -> None:
     estimator = AlphaBetaEstimator()
     state = estimator.update(sample(0.0, 0.0, velocity=50.0))
@@ -80,6 +94,25 @@ def test_controller_is_bounded_and_can_be_disabled() -> None:
     assert enabled.normalized_command == 0.5
     assert disabled.normalized_command == 0.0
     assert disabled.enabled is False
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        ControllerPolicy(proportional_gain=math.nan),
+        ControllerPolicy(derivative_gain=math.inf),
+        ControllerPolicy(command_limit=math.nan),
+    ],
+)
+def test_controller_policy_rejects_non_finite_values(policy: ControllerPolicy) -> None:
+    with pytest.raises(SimulationInputError, match="must be finite"):
+        PositionController(policy)
+
+
+def test_controller_rejects_non_finite_target() -> None:
+    state = AlphaBetaEstimator().update(sample(0.0, 0.0))
+    with pytest.raises(SimulationInputError, match="target position must be finite"):
+        PositionController().command(state, target_position_m=math.nan, enabled=True)
 
 
 def test_consensus_weights_confidence_and_uncertainty() -> None:
@@ -100,9 +133,16 @@ def test_consensus_rejects_duplicate_vehicle_identity() -> None:
         fuse_estimates(
             [
                 VehicleEstimate("a", 0.0, 0.0, 1.0, 1.0),
-                VehicleEstimate("a", 1.0, 0.0, 1.0, 1.0),
+                VehicleEstimate(" a ", 1.0, 0.0, 1.0, 1.0),
             ]
         )
+
+
+def test_consensus_rejects_non_text_identity_and_wrong_object_type() -> None:
+    with pytest.raises(SimulationInputError, match="vehicle_id must be non-empty text"):
+        fuse_estimates([VehicleEstimate(7, 0.0, 0.0, 1.0, 1.0)])  # type: ignore[arg-type]
+    with pytest.raises(SimulationInputError, match="VehicleEstimate objects"):
+        fuse_estimates([object()])  # type: ignore[list-item]
 
 
 def test_zero_aggregate_confidence_cannot_form_consensus() -> None:
