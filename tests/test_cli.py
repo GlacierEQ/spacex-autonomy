@@ -10,7 +10,10 @@ from spacex_autonomy.__main__ import main
 def test_cli_emits_standard_json_without_nan(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--position", "10", "--velocity", "2", "--target-position", "100"]) == 0
     output = capsys.readouterr().out
-    payload = json.loads(output, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+    payload = json.loads(
+        output,
+        parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)),
+    )
     assert payload["schema"] == "glaciereq.spacex-autonomy.simulation-snapshot.v1"
     assert payload["control"]["target_position_m"] == 100.0
 
