@@ -26,9 +26,10 @@ class EstimatorPolicy:
 class AlphaBetaEstimator:
     """Small deterministic position/velocity estimator for simulation evidence."""
 
-    def __init__(self, policy: EstimatorPolicy = EstimatorPolicy()) -> None:
-        policy.validate()
-        self.policy = policy
+    def __init__(self, policy: EstimatorPolicy | None = None) -> None:
+        active_policy = policy or EstimatorPolicy()
+        active_policy.validate()
+        self.policy = active_policy
         self._initialized = False
         self._timestamp_s = 0.0
         self._position_m = 0.0
