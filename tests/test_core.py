@@ -10,6 +10,7 @@ from spacex_autonomy import (
     AutonomySimulation,
     ControllerPolicy,
     EstimatorPolicy,
+    OperatingMode,
     PositionController,
     Sensors,
     SimulationInputError,
@@ -76,10 +77,11 @@ def test_estimator_requires_monotonic_time() -> None:
         EstimatorPolicy(alpha=math.nan),
         EstimatorPolicy(beta=math.inf),
         EstimatorPolicy(maximum_innovation_m=math.nan),
+        EstimatorPolicy(alpha=True),
     ],
 )
-def test_estimator_policy_rejects_non_finite_values(policy: EstimatorPolicy) -> None:
-    with pytest.raises(SimulationInputError, match="must be finite"):
+def test_estimator_policy_rejects_invalid_values(policy: EstimatorPolicy) -> None:
+    with pytest.raises(SimulationInputError):
         AlphaBetaEstimator(policy)
 
 
@@ -102,10 +104,11 @@ def test_controller_is_bounded_and_can_be_disabled() -> None:
         ControllerPolicy(proportional_gain=math.nan),
         ControllerPolicy(derivative_gain=math.inf),
         ControllerPolicy(command_limit=math.nan),
+        ControllerPolicy(command_limit=True),
     ],
 )
-def test_controller_policy_rejects_non_finite_values(policy: ControllerPolicy) -> None:
-    with pytest.raises(SimulationInputError, match="must be finite"):
+def test_controller_policy_rejects_invalid_values(policy: ControllerPolicy) -> None:
+    with pytest.raises(SimulationInputError):
         PositionController(policy)
 
 
@@ -176,3 +179,52 @@ def test_manual_mode_disables_control_output() -> None:
     assert snapshot.mode == "MANUAL"
     assert snapshot.control.enabled is False
     assert snapshot.control.normalized_command == 0.0
+
+
+def test_failed_consensus_does_not_advance_estimator_or_mode_history() -> None:
+    simulation = AutonomySimulation()
+    first = simulation.step(
+        telemetry=sample(0.0, 0.0),
+        sensor_confidence=Sensors(0.9, 0.9, 0.9, 0.9),
+        target_position_m=10.0,
+    )
+    assert first.mode == "AUTO"
+    assert simulation.previous_mode is OperatingMode.AUTO
+
+    duplicate_peers = [
+        VehicleEstimate("peer", 1.0, 0.0, 1.0, 1.0),
+        VehicleEstimate(" peer ", 2.0, 0.0, 1.0, 1.0),
+    ]
+    with pytest.raises(SimulationInputError, match="duplicate vehicle_id"):
+        simulation.step(
+            telemetry=sample(1.0, 1.0),
+            sensor_confidence=Sensors(0.1, 0.1, 0.1, 0.1),
+            target_position_m=10.0,
+            peer_estimates=duplicate_peers,
+        )
+
+    assert simulation.previous_mode is OperatingMode.AUTO
+    retry = simulation.step(
+        telemetry=sample(1.0, 1.0),
+        sensor_confidence=Sensors(0.1, 0.1, 0.1, 0.1),
+        target_position_m=10.0,
+        peer_estimates=[VehicleEstimate("peer", 1.0, 0.0, 1.0, 1.0)],
+    )
+    assert retry.mode == "MANUAL"
+    assert simulation.previous_mode is OperatingMode.MANUAL
+
+
+def test_failed_non_monotonic_step_does_not_commit_mode() -> None:
+    simulation = AutonomySimulation()
+    simulation.step(
+        telemetry=sample(1.0, 0.0),
+        sensor_confidence=Sensors(0.9, 0.9, 0.9, 0.9),
+        target_position_m=10.0,
+    )
+    with pytest.raises(SimulationInputError, match="increase monotonically"):
+        simulation.step(
+            telemetry=sample(1.0, 1.0),
+            sensor_confidence=Sensors(0.1, 0.1, 0.1, 0.1),
+            target_position_m=10.0,
+        )
+    assert simulation.previous_mode is OperatingMode.AUTO
