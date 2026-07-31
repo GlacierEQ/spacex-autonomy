@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from .models import ControlCommand, EstimatedState, SimulationInputError
@@ -12,6 +13,13 @@ class ControllerPolicy:
     command_limit: float = 1.0
 
     def validate(self) -> None:
+        values = (
+            self.proportional_gain,
+            self.derivative_gain,
+            self.command_limit,
+        )
+        if any(not math.isfinite(value) for value in values):
+            raise SimulationInputError("controller policy values must be finite")
         if self.proportional_gain < 0.0:
             raise SimulationInputError("proportional gain cannot be negative")
         if self.derivative_gain < 0.0:
@@ -37,6 +45,8 @@ class PositionController:
     ) -> ControlCommand:
         if isinstance(target_position_m, bool) or not isinstance(target_position_m, (int, float)):
             raise SimulationInputError("target position must be a real number")
+        if not math.isfinite(target_position_m):
+            raise SimulationInputError("target position must be finite")
 
         error = float(target_position_m) - state.position_m
         if not enabled:
