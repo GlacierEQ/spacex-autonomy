@@ -20,9 +20,7 @@ def _write_junit(
     cases.extend(
         f'<testcase name="skip-{index}"><skipped /></testcase>' for index in range(skipped)
     )
-    cases.extend(
-        f'<testcase name="fail-{index}"><failure /></testcase>' for index in range(failed)
-    )
+    cases.extend(f'<testcase name="fail-{index}"><failure /></testcase>' for index in range(failed))
     path.write_text(
         '<?xml version="1.0" encoding="utf-8"?>'
         '<testsuites><testsuite name="suite">' + "".join(cases) + "</testsuite></testsuites>",
@@ -216,9 +214,7 @@ def test_readme_contract_rejects_order_paths_and_unsupported_claims(tmp_path: Pa
     errors = verify_readme(readme)
     assert "audience headings are out of order" in errors
     assert "README exposes a machine-local path" in errors
-    assert any(
-        error.startswith("README contains unsupported public claims") for error in errors
-    )
+    assert any(error.startswith("README contains unsupported public claims") for error in errors)
 
 
 def test_headings_inside_code_fence_do_not_satisfy_contract(tmp_path: Path) -> None:
