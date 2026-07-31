@@ -66,7 +66,15 @@ class ModePolicy:
         )
         if any(not math.isfinite(value) for value in values):
             raise AutonomyInputError("mode thresholds must be finite")
-        if not 0.0 <= self.manual_enter <= self.manual_exit < self.auto_exit <= self.auto_enter <= 1.0:
+        ordered = (
+            0.0
+            <= self.manual_enter
+            <= self.manual_exit
+            < self.auto_exit
+            <= self.auto_enter
+            <= 1.0
+        )
+        if not ordered:
             raise AutonomyInputError(
                 "mode thresholds must satisfy 0 <= manual_enter <= manual_exit "
                 "< auto_exit <= auto_enter <= 1"
@@ -100,26 +108,27 @@ def weighted_confidence(sensors: Sensors) -> float:
 def select_mode(
     sensors: Sensors,
     previous: OperatingMode = OperatingMode.ASSIST,
-    policy: ModePolicy = ModePolicy(),
+    policy: ModePolicy | None = None,
 ) -> ModeDecision:
     """Select an operating mode with explicit entry and exit hysteresis."""
 
     if not isinstance(previous, OperatingMode):
         raise AutonomyInputError("previous mode must be an OperatingMode")
-    policy.validate()
+    active_policy = policy or ModePolicy()
+    active_policy.validate()
     confidence = weighted_confidence(sensors)
 
-    if confidence < policy.manual_enter:
+    if confidence < active_policy.manual_enter:
         candidate = OperatingMode.MANUAL
-    elif confidence >= policy.auto_enter:
+    elif confidence >= active_policy.auto_enter:
         candidate = OperatingMode.AUTO
     else:
         candidate = OperatingMode.ASSIST
 
     selected = candidate
-    if previous is OperatingMode.AUTO and confidence >= policy.auto_exit:
+    if previous is OperatingMode.AUTO and confidence >= active_policy.auto_exit:
         selected = OperatingMode.AUTO
-    elif previous is OperatingMode.MANUAL and confidence < policy.manual_exit:
+    elif previous is OperatingMode.MANUAL and confidence < active_policy.manual_exit:
         selected = OperatingMode.MANUAL
 
     return ModeDecision(
