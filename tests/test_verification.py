@@ -8,7 +8,13 @@ from scripts.verify_junit import MAX_JUNIT_BYTES, verify_junit
 from scripts.verify_readme_contract import HEADINGS, REQUIRED_EVIDENCE, verify_readme
 
 
-def _write_junit(path: Path, *, passed: int = 1, skipped: int = 0, failed: int = 0) -> None:
+def _write_junit(
+    path: Path,
+    *,
+    passed: int = 1,
+    skipped: int = 0,
+    failed: int = 0,
+) -> None:
     cases: list[str] = []
     cases.extend(f'<testcase name="pass-{index}" />' for index in range(passed))
     cases.extend(
@@ -210,7 +216,9 @@ def test_readme_contract_rejects_order_paths_and_unsupported_claims(tmp_path: Pa
     errors = verify_readme(readme)
     assert "audience headings are out of order" in errors
     assert "README exposes a machine-local path" in errors
-    assert any(error.startswith("README contains unsupported public claims") for error in errors)
+    assert any(
+        error.startswith("README contains unsupported public claims") for error in errors
+    )
 
 
 def test_headings_inside_code_fence_do_not_satisfy_contract(tmp_path: Path) -> None:
