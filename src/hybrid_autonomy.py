@@ -30,6 +30,15 @@ class OperatingMode(StrEnum):
     AUTO = "AUTO"
 
 
+def _bounded_unit_value(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise AutonomyInputError(f"{name} must be a real number")
+    numeric = float(value)
+    if not math.isfinite(numeric) or not 0.0 <= numeric <= 1.0:
+        raise AutonomyInputError(f"{name} must be finite and within [0, 1]")
+    return numeric
+
+
 @dataclass(frozen=True, slots=True)
 class Sensors:
     imu_conf: float
@@ -44,10 +53,7 @@ class Sensors:
             ("gps_conf", self.gps_conf),
             ("link_conf", self.link_conf),
         ):
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise AutonomyInputError(f"{name} must be a real number")
-            if not math.isfinite(value) or not 0.0 <= value <= 1.0:
-                raise AutonomyInputError(f"{name} must be finite and within [0, 1]")
+            _bounded_unit_value(name, value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,22 +64,11 @@ class ModePolicy:
     auto_enter: float = 0.75
 
     def validate(self) -> None:
-        values = (
-            self.manual_enter,
-            self.manual_exit,
-            self.auto_exit,
-            self.auto_enter,
-        )
-        if any(not math.isfinite(value) for value in values):
-            raise AutonomyInputError("mode thresholds must be finite")
-        ordered = (
-            0.0
-            <= self.manual_enter
-            <= self.manual_exit
-            < self.auto_exit
-            <= self.auto_enter
-            <= 1.0
-        )
+        manual_enter = _bounded_unit_value("manual_enter", self.manual_enter)
+        manual_exit = _bounded_unit_value("manual_exit", self.manual_exit)
+        auto_exit = _bounded_unit_value("auto_exit", self.auto_exit)
+        auto_enter = _bounded_unit_value("auto_enter", self.auto_enter)
+        ordered = 0.0 <= manual_enter <= manual_exit < auto_exit <= auto_enter <= 1.0
         if not ordered:
             raise AutonomyInputError(
                 "mode thresholds must satisfy 0 <= manual_enter <= manual_exit "
