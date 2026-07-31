@@ -72,9 +72,7 @@ class AlphaBetaEstimator:
             raise SimulationInputError("telemetry timestamps must increase monotonically")
 
         predicted_position = (
-            self._position_m
-            + self._velocity_mps * dt
-            + 0.5 * sample.acceleration_mps2 * dt * dt
+            self._position_m + self._velocity_mps * dt + 0.5 * sample.acceleration_mps2 * dt * dt
         )
         predicted_velocity = self._velocity_mps + sample.acceleration_mps2 * dt
         innovation = sample.position_m - predicted_position
@@ -88,9 +86,7 @@ class AlphaBetaEstimator:
             position_gain = self.policy.alpha * confidence
             velocity_gain = self.policy.beta * confidence
             self._position_m = predicted_position + position_gain * innovation
-            self._velocity_mps = (
-                predicted_velocity + velocity_gain * innovation / dt
-            )
+            self._velocity_mps = predicted_velocity + velocity_gain * innovation / dt
         else:
             self._position_m = predicted_position
             self._velocity_mps = predicted_velocity
