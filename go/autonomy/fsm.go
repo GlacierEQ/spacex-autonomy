@@ -98,19 +98,19 @@ func (c Criteria) Validate() error {
 
 // State is the simulated vehicle state used by the threshold engine.
 type State struct {
-	Phase              Phase
-	MissionElapsed     time.Duration
-	AltitudeM          float64
-	VelocityMPS        float64
-	DynamicPressurePa  float64
-	ThrustN            float64
-	MassKg             float64
-	DeviationDeg       float64
-	RotationRateRads   float64
-	PropellantKg       float64
-	AbortScore         float64
-	ProcessedReadings  uint64
-	RejectedReadings   uint64
+	Phase             Phase
+	MissionElapsed    time.Duration
+	AltitudeM         float64
+	VelocityMPS       float64
+	DynamicPressurePa float64
+	ThrustN           float64
+	MassKg            float64
+	DeviationDeg      float64
+	RotationRateRads  float64
+	PropellantKg      float64
+	AbortScore        float64
+	ProcessedReadings uint64
+	RejectedReadings  uint64
 }
 
 // Reading is one validated state update.
