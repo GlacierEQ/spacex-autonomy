@@ -60,9 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             namespace.link_confidence,
         ),
         target_position_m=namespace.target_position,
-        peer_estimates=[
-            VehicleEstimate("local", namespace.position, namespace.velocity, 0.9, 1.0)
-        ],
+        peer_estimates=[VehicleEstimate("local", namespace.position, namespace.velocity, 0.9, 1.0)],
     )
     print(json.dumps(snapshot.to_dict(), indent=2, sort_keys=True, allow_nan=False))
     return 0
