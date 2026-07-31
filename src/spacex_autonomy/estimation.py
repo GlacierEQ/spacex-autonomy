@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from .models import EstimatedState, SimulationInputError, TelemetrySample
@@ -13,6 +14,14 @@ class EstimatorPolicy:
     maximum_innovation_m: float = 500.0
 
     def validate(self) -> None:
+        values = (
+            self.alpha,
+            self.beta,
+            self.minimum_measurement_confidence,
+            self.maximum_innovation_m,
+        )
+        if any(not math.isfinite(value) for value in values):
+            raise SimulationInputError("estimator policy values must be finite")
         if not 0.0 < self.alpha <= 1.0:
             raise SimulationInputError("alpha must be within (0, 1]")
         if not 0.0 <= self.beta <= 1.0:
