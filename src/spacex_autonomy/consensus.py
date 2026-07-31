@@ -18,8 +18,8 @@ class VehicleEstimate:
     uncertainty: float
 
     def validate(self) -> None:
-        if not self.vehicle_id.strip():
-            raise SimulationInputError("vehicle_id must be non-empty")
+        if not isinstance(self.vehicle_id, str) or not self.vehicle_id.strip():
+            raise SimulationInputError("vehicle_id must be non-empty text")
         for name, value in (
             ("position_m", self.position_m),
             ("velocity_mps", self.velocity_mps),
@@ -51,10 +51,13 @@ def fuse_estimates(estimates: list[VehicleEstimate]) -> ConsensusEstimate | None
     weighted_velocity = 0.0
 
     for estimate in estimates:
+        if not isinstance(estimate, VehicleEstimate):
+            raise SimulationInputError("consensus inputs must be VehicleEstimate objects")
         estimate.validate()
-        if estimate.vehicle_id in seen:
-            raise SimulationInputError(f"duplicate vehicle_id: {estimate.vehicle_id}")
-        seen.add(estimate.vehicle_id)
+        vehicle_id = estimate.vehicle_id.strip()
+        if vehicle_id in seen:
+            raise SimulationInputError(f"duplicate vehicle_id: {vehicle_id}")
+        seen.add(vehicle_id)
         weight = estimate.confidence / max(estimate.uncertainty, MIN_UNCERTAINTY)
         total_weight += weight
         weighted_position += estimate.position_m * weight
