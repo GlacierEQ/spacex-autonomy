@@ -6,6 +6,15 @@ from dataclasses import dataclass
 from .models import EstimatedState, SimulationInputError, TelemetrySample
 
 
+def _real_value(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise SimulationInputError(f"{name} must be a real number")
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise SimulationInputError(f"{name} must be finite")
+    return numeric
+
+
 @dataclass(frozen=True, slots=True)
 class EstimatorPolicy:
     alpha: float = 0.65
@@ -14,21 +23,20 @@ class EstimatorPolicy:
     maximum_innovation_m: float = 500.0
 
     def validate(self) -> None:
-        values = (
-            self.alpha,
-            self.beta,
+        alpha = _real_value("alpha", self.alpha)
+        beta = _real_value("beta", self.beta)
+        minimum_confidence = _real_value(
+            "minimum measurement confidence",
             self.minimum_measurement_confidence,
-            self.maximum_innovation_m,
         )
-        if any(not math.isfinite(value) for value in values):
-            raise SimulationInputError("estimator policy values must be finite")
-        if not 0.0 < self.alpha <= 1.0:
+        maximum_innovation = _real_value("maximum innovation", self.maximum_innovation_m)
+        if not 0.0 < alpha <= 1.0:
             raise SimulationInputError("alpha must be within (0, 1]")
-        if not 0.0 <= self.beta <= 1.0:
+        if not 0.0 <= beta <= 1.0:
             raise SimulationInputError("beta must be within [0, 1]")
-        if not 0.0 <= self.minimum_measurement_confidence <= 1.0:
+        if not 0.0 <= minimum_confidence <= 1.0:
             raise SimulationInputError("minimum measurement confidence must be within [0, 1]")
-        if self.maximum_innovation_m <= 0.0:
+        if maximum_innovation <= 0.0:
             raise SimulationInputError("maximum innovation must be positive")
 
 
