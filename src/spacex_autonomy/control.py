@@ -23,9 +23,10 @@ class ControllerPolicy:
 class PositionController:
     """Deterministic bounded controller for one-dimensional simulation."""
 
-    def __init__(self, policy: ControllerPolicy = ControllerPolicy()) -> None:
-        policy.validate()
-        self.policy = policy
+    def __init__(self, policy: ControllerPolicy | None = None) -> None:
+        active_policy = policy or ControllerPolicy()
+        active_policy.validate()
+        self.policy = active_policy
 
     def command(
         self,
