@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from scripts.verify_go_test_json import MAX_GO_TEST_BYTES, verify_go_test_json
 from scripts.verify_junit import MAX_JUNIT_BYTES, verify_junit
 from scripts.verify_readme_contract import HEADINGS, REQUIRED_EVIDENCE, verify_readme
 
@@ -19,6 +20,13 @@ def _write_junit(path: Path, *, passed: int = 1, skipped: int = 0, failed: int =
     path.write_text(
         '<?xml version="1.0" encoding="utf-8"?>'
         '<testsuites><testsuite name="suite">' + "".join(cases) + "</testsuite></testsuites>",
+        encoding="utf-8",
+    )
+
+
+def _write_go_events(path: Path, events: list[dict[str, object]]) -> None:
+    path.write_text(
+        "".join(json.dumps(event, sort_keys=True) + "\n" for event in events),
         encoding="utf-8",
     )
 
@@ -94,6 +102,90 @@ def test_entity_non_utf8_and_oversized_reports_fail_closed(tmp_path: Path) -> No
             python_version="3.13",
         )
         assert receipt["conclusion"] == "FAILED"
+
+
+def test_positive_go_event_stream_creates_test_evidence(tmp_path: Path) -> None:
+    report = tmp_path / "go-test.json"
+    output = tmp_path / "go-receipt.json"
+    _write_go_events(
+        report,
+        [
+            {"Action": "pass", "Package": "autonomy", "Test": "TestOne"},
+            {"Action": "pass", "Package": "autonomy", "Test": "TestTwo"},
+            {"Action": "pass", "Package": "autonomy"},
+        ],
+    )
+    receipt = verify_go_test_json(
+        report,
+        output,
+        go_test_exit_code=0,
+        commit_sha="e" * 40,
+        go_version="go1.23.4",
+    )
+    assert receipt["conclusion"] == "VERIFIED"
+    assert receipt["passed"] == 2
+    assert receipt["executed"] == 2
+    assert len(receipt["report_sha256"]) == 64
+    assert json.loads(output.read_text(encoding="utf-8")) == receipt
+
+
+def test_zero_go_tests_cannot_establish_test_evidence(tmp_path: Path) -> None:
+    report = tmp_path / "go-test.json"
+    _write_go_events(report, [{"Action": "pass", "Package": "autonomy"}])
+    receipt = verify_go_test_json(
+        report,
+        tmp_path / "go-receipt.json",
+        go_test_exit_code=0,
+        commit_sha="f" * 40,
+        go_version="go1.23.4",
+    )
+    assert receipt["conclusion"] == "UNVERIFIED_ZERO_PROOF"
+
+
+def test_failed_or_malformed_go_events_fail_closed(tmp_path: Path) -> None:
+    failed = tmp_path / "failed.json"
+    _write_go_events(
+        failed,
+        [
+            {"Action": "fail", "Package": "autonomy", "Test": "TestBroken"},
+            {"Action": "fail", "Package": "autonomy"},
+        ],
+    )
+    failed_receipt = verify_go_test_json(
+        failed,
+        tmp_path / "failed-receipt.json",
+        go_test_exit_code=1,
+        commit_sha="0" * 40,
+        go_version="go1.23.4",
+    )
+    assert failed_receipt["conclusion"] == "FAILED"
+    assert failed_receipt["failed"] == 1
+    assert failed_receipt["packages_failed"] == 1
+
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("not-json\n", encoding="utf-8")
+    malformed_receipt = verify_go_test_json(
+        malformed,
+        tmp_path / "malformed-receipt.json",
+        go_test_exit_code=0,
+        commit_sha="1" * 40,
+        go_version="go1.23.4",
+    )
+    assert malformed_receipt["conclusion"] == "FAILED"
+
+
+def test_oversized_go_report_fails_closed(tmp_path: Path) -> None:
+    report = tmp_path / "oversized.json"
+    report.write_bytes(b" " * (MAX_GO_TEST_BYTES + 1))
+    receipt = verify_go_test_json(
+        report,
+        tmp_path / "receipt.json",
+        go_test_exit_code=0,
+        commit_sha="2" * 40,
+        go_version="go1.23.4",
+    )
+    assert receipt["conclusion"] == "FAILED"
+    assert "exceeds" in receipt["reason"]
 
 
 def test_readme_contract_accepts_ordered_portable_evidence(tmp_path: Path) -> None:
