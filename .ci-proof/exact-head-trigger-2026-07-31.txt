@@ -1,3 +1,0 @@
-Purpose: trigger the complete Python and Go verification workflow after transactional simulation, finite-input, CLI, formatter, and review hardening.
-Executable impact: none.
-Promotion rule: remove this file before merge and rerun the complete matrix on the receipt-bearing product head.
