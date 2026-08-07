@@ -1,14 +1,166 @@
-name: CI
+name: Autonomy Simulation Verification
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, "wave-1/**"]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: spacex-autonomy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  ci:
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-quick-ci.yml@main
-    with:
-      repo_name: ${{ github.event.repository.name }}
-      language: python
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      VERIFIED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out literal reviewed head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+          check-latest: false
+
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Lint, format, and compile promoted Python surfaces
+        run: |
+          ruff check src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
+          ruff format --check src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
+          python -m compileall -q src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
+
+      - name: Build source and wheel distributions
+        run: python -m build --outdir artifacts/dist
+
+      - name: Verify README, CLI, and local health contract
+        run: |
+          autonomy-verify-readme
+          mkdir -p artifacts
+          autonomy-sim --timestamp 0 --position 10 --velocity 2 --target-position 100 > artifacts/snapshot.json
+          python mastermind_sidecar.py > artifacts/health.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          snapshot = json.loads(Path("artifacts/snapshot.json").read_text(encoding="utf-8"))
+          health = json.loads(Path("artifacts/health.json").read_text(encoding="utf-8"))
+          assert snapshot["schema"] == "glaciereq.spacex-autonomy.simulation-snapshot.v1"
+          assert snapshot["mode"] in {"MANUAL", "ASSIST", "AUTO"}
+          assert "answer" not in snapshot
+          assert health["status"] == "healthy"
+          assert health["external_registration_verified"] is False
+          PY
+
+      - name: Run positive-count Python tests and build receipt
+        shell: bash
+        run: |
+          set +e
+          pytest --junitxml=artifacts/pytest.xml
+          pytest_exit=$?
+          set -e
+          python scripts/verify_junit.py \
+            --junit artifacts/pytest.xml \
+            --output artifacts/python-test-receipt.json \
+            --pytest-exit-code "$pytest_exit" \
+            --commit-sha "$VERIFIED_SHA" \
+            --python-version "${{ matrix.python-version }}"
+
+      - name: Upload Python evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: spacex-autonomy-python-${{ matrix.python-version }}
+          path: artifacts/
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 14
+
+  go:
+    name: Go native verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VERIFIED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out literal reviewed head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.23.4"
+          check-latest: false
+
+      - name: Set up Python receipt runtime
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          check-latest: false
+
+      - name: Format, vet, and build Go module
+        run: |
+          test -z "$(gofmt -l go)"
+          cd go
+          go vet ./...
+          go build ./...
+
+      - name: Run race-enabled positive-count Go tests and build receipt
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set +e
+          (cd go && go test -race -count=1 -json ./...) > artifacts/go-test.json
+          go_exit=$?
+          set -e
+          python scripts/verify_go_test_json.py \
+            --report artifacts/go-test.json \
+            --output artifacts/go-test-receipt.json \
+            --go-test-exit-code "$go_exit" \
+            --commit-sha "$VERIFIED_SHA" \
+            --go-version "$(go version | awk '{print $3}')"
+
+      - name: Upload Go evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: spacex-autonomy-go
+          path: artifacts/
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 14
+
+  required-quality-gate:
+    name: required-quality-gate
+    if: always()
+    needs: [python, go]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every native boundary
+        run: |
+          test "${{ needs.python.result }}" = "success"
+          test "${{ needs.go.result }}" = "success"

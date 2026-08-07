@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spacex-autonomy-simulation"
+version = "1.0.0"
+description = "Deterministic autonomy mode, estimation, control, consensus, and FSM simulation toolkit."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Casey Barton" }]
+keywords = ["autonomy", "simulation", "state-estimation", "control", "consensus"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2,<2",
+  "defusedxml>=0.7.1,<1",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+autonomy-sim = "spacex_autonomy.__main__:main"
+autonomy-verify-readme = "scripts.verify_readme_contract:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spacex_autonomy", "scripts"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/hybrid_autonomy.py" = "hybrid_autonomy.py"
+"mastermind_sidecar.py" = "mastermind_sidecar.py"
+"README.md" = "scripts/README.md"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["spacex_autonomy", "hybrid_autonomy", "scripts"]
