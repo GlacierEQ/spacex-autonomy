@@ -22,6 +22,39 @@ MODULE_PATHS: Final = (
 )
 
 
+def _looks_like_repository_root(path: Path) -> bool:
+    """Return whether ``path`` exposes the promoted repository proof surface."""
+
+    return (
+        (path / "pyproject.toml").is_file()
+        and (path / "src" / "spacex_autonomy").is_dir()
+        and (path / "go" / "autonomy" / "fsm.go").is_file()
+    )
+
+
+def discover_repository_root() -> Path:
+    """Resolve the checkout without confusing an installed module with the repo.
+
+    ``mastermind_sidecar.py`` is intentionally included in built artifacts. In
+    an editable/test installation ``__file__`` can therefore resolve through an
+    installed module location even while verification is running from the
+    source checkout. Prefer the current working directory only when it proves
+    the promoted repository structure; otherwise fall back to the module's
+    physical parent. An installed wheel outside a checkout remains degraded
+    rather than manufacturing repository evidence.
+    """
+
+    working_directory = Path.cwd().resolve()
+    if _looks_like_repository_root(working_directory):
+        return working_directory
+
+    module_parent = Path(__file__).resolve().parent
+    if _looks_like_repository_root(module_parent):
+        return module_parent
+
+    return module_parent
+
+
 class MastermindSidecar:
     """Produce a bounded local repository health report."""
 
@@ -31,7 +64,7 @@ class MastermindSidecar:
         repository_root: Path | None = None,
     ) -> None:
         self.repo_name = repo_name
-        self.repository_root = repository_root or Path(__file__).resolve().parent
+        self.repository_root = repository_root or discover_repository_root()
         self.start_time = time.monotonic()
 
     def file_hash(self, relative_path: Path) -> str:
