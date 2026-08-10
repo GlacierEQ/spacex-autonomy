@@ -1,0 +1,11 @@
+{
+  "schema": "glaciereq.promotion-authority-grant.v1",
+  "repository": "GlacierEQ/spacex-autonomy",
+  "source_sha": "5a0bb7b1af69c980a0bfe37e5aa07af30a167a2ed80d19550c1cd28e72ceb497",
+  "proof_receipt_digest": "a5a6865978835c3ca0c428c457461efc9fa6fe1467d089658357334af390663b",
+  "not_after": 1788927149.234226,
+  "mac": "c91e7cb322d7bc1b4d657d968d685fcf53cc58243533d89c561554a5751f774b",
+  "issuer": "local_operator_promotion_authority",
+  "verified": true,
+  "secret_ref": "src/promotion_authority.py::LOCAL_OPERATOR_SECRET"
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "glaciereq.operability-receipt.v1",
+  "repository": "GlacierEQ/spacex-autonomy",
+  "at": "2026-08-10T04:12Z",
+  "source_sha": "5a0bb7b1af69c980a0bfe37e5aa07af30a167a2ed80d19550c1cd28e72ceb497",
+  "entry": "scripts/operate.py",
+  "primary_output": {
+    "module": "hybrid_autonomy",
+    "ok": true,
+    "repository": "GlacierEQ/spacex-autonomy",
+    "smoke": {
+      "args": [
+        "Sensors(imu_conf=1.0, vision_conf=1.0, g"
+      ],
+      "content_checked": true,
+      "invoked": true,
+      "kind": "fn",
+      "name": "mode",
+      "result": {
+        "confidence": 1.0,
+        "hysteresis_applied": false,
+        "mode": "AUTO",
+        "previous_mode": "ASSIST",
+        "schema": "glaciereq.spacex-autonomy.mode-decision.v1"
+      }
+    }
+  },
+  "dual_run_ok": true,
+  "result": "PASS"
+}
