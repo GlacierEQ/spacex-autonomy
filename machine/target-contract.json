@@ -5,18 +5,31 @@
     "family": "elite-estate"
   },
   "current": {
-    "state": "PROMOTED",
+    "state": "TESTED",
     "implemented": true,
     "tested": true,
     "deployed": false
   },
-  "nonclaims": [
-    "no employer affiliation",
-    "no production deployment without receipt"
+  "evidence_state": "LOCAL_AUTONOMY_SIMULATION_NOT_FLIGHT_CONTROL_AUTHORITY",
+  "verified_scope": [
+    "deterministic Python autonomy mode policy and hysteresis",
+    "one-dimensional alpha-beta state estimation",
+    "bounded local position-control simulation",
+    "weighted multi-vehicle estimate fusion",
+    "concurrency-safe Go phase and threshold simulation"
   ],
+  "nonclaims": [
+    "no SpaceX affiliation, endorsement, employment, or proprietary access",
+    "no real vehicle, actuator, telemetry bus, flight computer, or external command output",
+    "no navigation-grade estimator or validated mission thresholds",
+    "no adversarial Byzantine consensus guarantee",
+    "no operational launch, re-entry, landing, or abort authority",
+    "no hardware-in-the-loop, deployment, reliability, or performance proof"
+  ],
+  "next_gate": "exact-current-head Python and Go native proof receipts",
   "donor_plan": {
-    "mode": "none",
+    "mode": "bounded-capability-donor",
     "donors": []
   },
-  "frozen_at": "2026-08-10T04:12Z"
+  "frozen_at": "2026-08-11T13:36:00-10:00"
 }
