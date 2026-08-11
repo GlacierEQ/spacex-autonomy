@@ -1,1 +1,10 @@
-{"capabilities": ["hyper-scaling"]}
+{
+  "schema": "glaciereq.repo-capabilities.v1",
+  "evidence_state": "LOCAL_AUTONOMY_SIMULATION_NOT_FLIGHT_CONTROL_AUTHORITY",
+  "capabilities": [
+    "deterministic-local-autonomy-mode-policy-and-hysteresis",
+    "one-dimensional-state-estimation-and-bounded-position-control",
+    "weighted-local-multi-vehicle-estimate-fusion",
+    "concurrency-safe-go-phase-threshold-simulation"
+  ]
+}
