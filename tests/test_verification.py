@@ -263,9 +263,7 @@ def test_readme_contract_rejects_appended_operational_authority_claim(tmp_path: 
 def test_headings_inside_code_fence_do_not_satisfy_contract(tmp_path: Path) -> None:
     readme = tmp_path / "README.md"
     readme.write_text(
-        "\n".join(
-            ("```markdown", *HEADINGS, "```", *REQUIRED_EVIDENCE, *REQUIRED_BOUNDARY)
-        ),
+        "\n".join(("```markdown", *HEADINGS, "```", *REQUIRED_EVIDENCE, *REQUIRED_BOUNDARY)),
         encoding="utf-8",
     )
     assert any(
