@@ -5,7 +5,12 @@ from pathlib import Path
 
 from scripts.verify_go_test_json import MAX_GO_TEST_BYTES, verify_go_test_json
 from scripts.verify_junit import MAX_JUNIT_BYTES, verify_junit
-from scripts.verify_readme_contract import HEADINGS, REQUIRED_EVIDENCE, verify_readme
+from scripts.verify_readme_contract import (
+    HEADINGS,
+    REQUIRED_BOUNDARY,
+    REQUIRED_EVIDENCE,
+    verify_readme,
+)
 
 
 def _write_junit(
@@ -36,7 +41,7 @@ def _write_go_events(path: Path, events: list[dict[str, object]]) -> None:
 
 
 def _valid_readme() -> str:
-    return "\n".join((*HEADINGS, *REQUIRED_EVIDENCE)) + "\n"
+    return "\n".join((*HEADINGS, *REQUIRED_EVIDENCE, *REQUIRED_BOUNDARY)) + "\n"
 
 
 def test_positive_count_receipt_is_verified_and_atomic(tmp_path: Path) -> None:
@@ -108,7 +113,7 @@ def test_entity_non_utf8_and_oversized_reports_fail_closed(tmp_path: Path) -> No
         assert receipt["conclusion"] == "FAILED"
 
 
-def test_positive_go_event_stream_creates_test_evidence(tmp_path: Path) -> None:
+def test_positive_go_event_stream_creates_race_test_evidence(tmp_path: Path) -> None:
     report = tmp_path / "go-test.json"
     output = tmp_path / "go-receipt.json"
     _write_go_events(
@@ -125,12 +130,33 @@ def test_positive_go_event_stream_creates_test_evidence(tmp_path: Path) -> None:
         go_test_exit_code=0,
         commit_sha="e" * 40,
         go_version="go1.23.4",
+        race_enabled=True,
     )
     assert receipt["conclusion"] == "VERIFIED"
+    assert receipt["race_enabled"] is True
     assert receipt["passed"] == 2
     assert receipt["executed"] == 2
     assert len(receipt["report_sha256"]) == 64
     assert json.loads(output.read_text(encoding="utf-8")) == receipt
+
+
+def test_non_race_go_execution_cannot_establish_test_evidence(tmp_path: Path) -> None:
+    report = tmp_path / "go-test.json"
+    _write_go_events(
+        report,
+        [{"Action": "pass", "Package": "autonomy", "Test": "TestOne"}],
+    )
+    receipt = verify_go_test_json(
+        report,
+        tmp_path / "receipt.json",
+        go_test_exit_code=0,
+        commit_sha="e" * 40,
+        go_version="go1.23.4",
+        race_enabled=False,
+    )
+    assert receipt["conclusion"] == "FAILED"
+    assert receipt["race_enabled"] is False
+    assert "race-enabled" in receipt["reason"]
 
 
 def test_zero_go_tests_cannot_establish_test_evidence(tmp_path: Path) -> None:
@@ -142,6 +168,7 @@ def test_zero_go_tests_cannot_establish_test_evidence(tmp_path: Path) -> None:
         go_test_exit_code=0,
         commit_sha="f" * 40,
         go_version="go1.23.4",
+        race_enabled=True,
     )
     assert receipt["conclusion"] == "UNVERIFIED_ZERO_PROOF"
 
@@ -161,6 +188,7 @@ def test_failed_or_malformed_go_events_fail_closed(tmp_path: Path) -> None:
         go_test_exit_code=1,
         commit_sha="0" * 40,
         go_version="go1.23.4",
+        race_enabled=True,
     )
     assert failed_receipt["conclusion"] == "FAILED"
     assert failed_receipt["failed"] == 1
@@ -174,6 +202,7 @@ def test_failed_or_malformed_go_events_fail_closed(tmp_path: Path) -> None:
         go_test_exit_code=0,
         commit_sha="1" * 40,
         go_version="go1.23.4",
+        race_enabled=True,
     )
     assert malformed_receipt["conclusion"] == "FAILED"
 
@@ -187,6 +216,7 @@ def test_oversized_go_report_fails_closed(tmp_path: Path) -> None:
         go_test_exit_code=0,
         commit_sha="2" * 40,
         go_version="go1.23.4",
+        race_enabled=True,
     )
     assert receipt["conclusion"] == "FAILED"
     assert "exceeds" in receipt["reason"]
@@ -205,6 +235,7 @@ def test_readme_contract_rejects_order_paths_and_unsupported_claims(tmp_path: Pa
             (
                 *reversed(HEADINGS),
                 *REQUIRED_EVIDENCE,
+                *REQUIRED_BOUNDARY,
                 "/home/operator/repo",
                 "sub-millisecond latency",
             )
@@ -217,10 +248,22 @@ def test_readme_contract_rejects_order_paths_and_unsupported_claims(tmp_path: Pa
     assert any(error.startswith("README contains unsupported public claims") for error in errors)
 
 
+def test_readme_contract_rejects_appended_operational_authority_claim(tmp_path: Path) -> None:
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        _valid_readme() + "This system controls a vehicle flight computer in production.\n",
+        encoding="utf-8",
+    )
+    assert any(
+        error.startswith("README contains contradictory authority claims")
+        for error in verify_readme(readme)
+    )
+
+
 def test_headings_inside_code_fence_do_not_satisfy_contract(tmp_path: Path) -> None:
     readme = tmp_path / "README.md"
     readme.write_text(
-        "\n".join(("```markdown", *HEADINGS, "```", *REQUIRED_EVIDENCE)),
+        "\n".join(("```markdown", *HEADINGS, "```", *REQUIRED_EVIDENCE, *REQUIRED_BOUNDARY)),
         encoding="utf-8",
     )
     assert any(

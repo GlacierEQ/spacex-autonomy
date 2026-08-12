@@ -2,7 +2,7 @@ name: Autonomy Simulation Verification
 
 on:
   push:
-    branches: [main, "wave-1/**"]
+    branches: [main, "wave-1/**", "repair/**"]
   pull_request:
     branches: [main]
 
@@ -32,6 +32,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Assert exact source identity
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$VERIFIED_SHA"
+
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
@@ -46,9 +50,21 @@ jobs:
 
       - name: Lint, format, and compile promoted Python surfaces
         run: |
-          ruff check src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
-          ruff format --check src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
-          python -m compileall -q src/spacex_autonomy src/hybrid_autonomy.py mastermind_sidecar.py tests scripts
+          promoted=(
+            src/spacex_autonomy
+            src/hybrid_autonomy.py
+            mastermind_sidecar.py
+            scripts/verify_junit.py
+            scripts/verify_go_test_json.py
+            scripts/verify_readme_contract.py
+            tests/test_autonomy.py
+            tests/test_core.py
+            tests/test_verification.py
+            tests/test_public_truth.py
+          )
+          ruff check "${promoted[@]}"
+          ruff format --check "${promoted[@]}"
+          python -m compileall -q "${promoted[@]}"
 
       - name: Build source and wheel distributions
         run: python -m build --outdir artifacts/dist
@@ -72,7 +88,7 @@ jobs:
           assert health["external_registration_verified"] is False
           PY
 
-      - name: Run positive-count Python tests and build receipt
+      - name: Run full positive-count Python tests and build receipt
         shell: bash
         run: |
           set +e
@@ -110,6 +126,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Assert exact source identity
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$VERIFIED_SHA"
+
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
@@ -142,7 +162,8 @@ jobs:
             --output artifacts/go-test-receipt.json \
             --go-test-exit-code "$go_exit" \
             --commit-sha "$VERIFIED_SHA" \
-            --go-version "$(go version | awk '{print $3}')"
+            --go-version "$(go version | awk '{print $3}')" \
+            --race-enabled
 
       - name: Upload Go evidence
         if: always()
