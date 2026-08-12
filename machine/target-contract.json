@@ -26,7 +26,14 @@
     "no operational launch, re-entry, landing, or abort authority",
     "no hardware-in-the-loop, deployment, reliability, or performance proof"
   ],
-  "next_gate": "exact-current-head Python and Go native proof receipts",
+  "proof_contract": {
+    "python_versions": ["3.11", "3.12", "3.13"],
+    "python_positive_count_receipt_required": true,
+    "go_positive_count_receipt_required": true,
+    "go_race_enabled_required": true,
+    "exact_canonical_head_required": true
+  },
+  "next_gate": "exact-current-head Python receipts plus Go race-enabled native receipt",
   "donor_plan": {
     "mode": "bounded-capability-donor",
     "donors": []
