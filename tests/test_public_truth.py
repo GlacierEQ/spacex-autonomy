@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from scripts.verify_readme_contract import verify_readme
+
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "LOCAL_AUTONOMY_SIMULATION_NOT_FLIGHT_CONTROL_AUTHORITY"
 APPROVED_CAPABILITIES = [
@@ -11,6 +13,21 @@ APPROVED_CAPABILITIES = [
     "weighted-local-multi-vehicle-estimate-fusion",
     "concurrency-safe-go-phase-threshold-simulation",
 ]
+APPROVED_SCOPE = [
+    "deterministic Python autonomy mode policy and hysteresis",
+    "one-dimensional alpha-beta state estimation",
+    "bounded local position-control simulation",
+    "weighted multi-vehicle estimate fusion",
+    "concurrency-safe Go phase and threshold simulation",
+]
+APPROVED_NONCLAIMS = [
+    "no SpaceX affiliation, endorsement, employment, or proprietary access",
+    "no real vehicle, actuator, telemetry bus, flight computer, or external command output",
+    "no navigation-grade estimator or validated mission thresholds",
+    "no adversarial Byzantine consensus guarantee",
+    "no operational launch, re-entry, landing, or abort authority",
+    "no hardware-in-the-loop, deployment, reliability, or performance proof",
+]
 
 
 def read(path: str) -> str:
@@ -18,11 +35,7 @@ def read(path: str) -> str:
 
 
 def test_readme_preserves_independent_non_flight_boundary() -> None:
-    readme = read("README.md")
-    assert "This is an independent portfolio project" in readme
-    assert "does not claim SpaceX employment, endorsement, affiliation" in readme
-    assert "It does not contact a vehicle, network, provider, or external control system" in readme
-    assert "Simulation output is not operational flight guidance" in readme
+    assert verify_readme(ROOT / "README.md") == ()
 
 
 def test_machine_capability_surface_is_exact_whitelist() -> None:
@@ -51,11 +64,17 @@ def test_machine_state_requires_external_current_head_receipt() -> None:
     assert "never self-asserts" in receipt["binding_rule"]
 
 
-def test_target_contract_is_tested_not_promoted() -> None:
+def test_target_contract_is_an_exact_allowlist() -> None:
     contract = json.loads(read("machine/target-contract.json"))
-    assert contract["current"]["state"] == "TESTED"
+    assert contract["current"] == {
+        "state": "TESTED",
+        "implemented": True,
+        "tested": True,
+        "deployed": False,
+    }
     assert contract["evidence_state"] == TOKEN
-    assert contract["next_gate"] == "exact-current-head Python and Go native proof receipts"
-    nonclaims = "\n".join(contract["nonclaims"])
-    assert "no real vehicle" in nonclaims
-    assert "no operational launch" in nonclaims
+    assert contract["verified_scope"] == APPROVED_SCOPE
+    assert contract["nonclaims"] == APPROVED_NONCLAIMS
+    assert contract["next_gate"] == (
+        "exact-current-head Python and Go native proof receipts"
+    )
