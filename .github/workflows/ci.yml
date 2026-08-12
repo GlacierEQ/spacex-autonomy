@@ -162,7 +162,8 @@ jobs:
             --output artifacts/go-test-receipt.json \
             --go-test-exit-code "$go_exit" \
             --commit-sha "$VERIFIED_SHA" \
-            --go-version "$(go version | awk '{print $3}')"
+            --go-version "$(go version | awk '{print $3}')" \
+            --race-enabled
 
       - name: Upload Go evidence
         if: always()
