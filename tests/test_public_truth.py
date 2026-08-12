@@ -28,6 +28,13 @@ APPROVED_NONCLAIMS = [
     "no operational launch, re-entry, landing, or abort authority",
     "no hardware-in-the-loop, deployment, reliability, or performance proof",
 ]
+REQUIRED_RECEIPTS = [
+    "Autonomy Simulation Verification",
+    "Python 3.11 positive-count TEST receipt",
+    "Python 3.12 positive-count TEST receipt",
+    "Python 3.13 positive-count TEST receipt",
+    "Go native positive-count TEST receipt with race_enabled=true",
+]
 
 
 def read(path: str) -> str:
@@ -52,15 +59,18 @@ def test_machine_state_requires_external_current_head_receipt() -> None:
     for gate in (
         "PYTHON_PACKAGE_PROOF",
         "PYTHON_POSITIVE_TEST_RECEIPT",
-        "GO_NATIVE_BUILD_AND_RACE_TEST",
         "PUBLIC_README_BOUNDARY",
     ):
         assert state["gates"][gate] == "REQUIRES_CURRENT_HEAD_RECEIPT"
+    assert state["gates"]["GO_NATIVE_BUILD_AND_RACE_TEST"] == (
+        "REQUIRES_CURRENT_HEAD_RACE_RECEIPT"
+    )
     assert state["gates"]["EXTERNAL_COMMAND_AUTHORITY"] == "NOT_CLAIMED"
     assert state["gates"]["PRODUCTION_DEPLOYMENT"] == "NOT_PROVEN"
     receipt = state["proof_receipt"]
     assert receipt["state"] == "EXTERNAL_EXACT_HEAD_RECEIPT_REQUIRED"
-    assert receipt["required"] == ["Autonomy Simulation Verification"]
+    assert receipt["required"] == REQUIRED_RECEIPTS
+    assert "race_enabled=true" in receipt["binding_rule"]
     assert "never self-asserts" in receipt["binding_rule"]
 
 
@@ -75,6 +85,13 @@ def test_target_contract_is_an_exact_allowlist() -> None:
     assert contract["evidence_state"] == TOKEN
     assert contract["verified_scope"] == APPROVED_SCOPE
     assert contract["nonclaims"] == APPROVED_NONCLAIMS
+    assert contract["proof_contract"] == {
+        "python_versions": ["3.11", "3.12", "3.13"],
+        "python_positive_count_receipt_required": True,
+        "go_positive_count_receipt_required": True,
+        "go_race_enabled_required": True,
+        "exact_canonical_head_required": True,
+    }
     assert contract["next_gate"] == (
-        "exact-current-head Python and Go native proof receipts"
+        "exact-current-head Python receipts plus Go race-enabled native receipt"
     )
