@@ -42,7 +42,10 @@ FORBIDDEN_CLAIMS: Final = (
 FORBIDDEN_AFFIRMATIVE_PATTERNS: Final = tuple(
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
-        r"\b(?:this system|the system|software|toolkit|service|controller)\s+(?:controls?|commands?)\b.{0,40}\b(?:vehicle|actuator|flight computer)\b",
+        (
+            r"\b(?:this system|the system|software|toolkit|service|controller)\s+"
+            r"(?:controls?|commands?)\b.{0,40}\b(?:vehicle|actuator|flight computer)\b"
+        ),
         r"\boperational\b.{0,30}\b(?:flight|launch|re-entry|reentry|landing|abort)\b",
         r"\bproduction deployment\b",
         r"\bSpaceX\b.{0,30}\b(?:internal|proprietary|production)\b",
