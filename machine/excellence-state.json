@@ -14,7 +14,7 @@
     "CENTRAL_MECHANISM_PRESENT": "PASS",
     "PYTHON_PACKAGE_PROOF": "REQUIRES_CURRENT_HEAD_RECEIPT",
     "PYTHON_POSITIVE_TEST_RECEIPT": "REQUIRES_CURRENT_HEAD_RECEIPT",
-    "GO_NATIVE_BUILD_AND_RACE_TEST": "REQUIRES_CURRENT_HEAD_RECEIPT",
+    "GO_NATIVE_BUILD_AND_RACE_TEST": "REQUIRES_CURRENT_HEAD_RACE_RECEIPT",
     "PUBLIC_README_BOUNDARY": "REQUIRES_CURRENT_HEAD_RECEIPT",
     "EXTERNAL_COMMAND_AUTHORITY": "NOT_CLAIMED",
     "PRODUCTION_DEPLOYMENT": "NOT_PROVEN",
@@ -37,9 +37,13 @@
   "proof_receipt": {
     "state": "EXTERNAL_EXACT_HEAD_RECEIPT_REQUIRED",
     "required": [
-      "Autonomy Simulation Verification"
+      "Autonomy Simulation Verification",
+      "Python 3.11 positive-count TEST receipt",
+      "Python 3.12 positive-count TEST receipt",
+      "Python 3.13 positive-count TEST receipt",
+      "Go native positive-count TEST receipt with race_enabled=true"
     ],
-    "binding_rule": "admission authority must record successful current-head Python 3.11/3.12/3.13 and Go native jobs whose workflow head_sha equals the canonical repository head; source state never self-asserts its own future CI outcome"
+    "binding_rule": "admission authority must record successful current-head Python 3.11/3.12/3.13 and Go native jobs whose workflow head_sha equals the canonical repository head; the Go receipt must record race_enabled=true; source state never self-asserts its own future CI outcome"
   },
   "evolution_cursor": "next:current_head_native_proof_then_canonical_position_resolution",
   "updated_at": "2026-08-11T13:36:00-10:00"
