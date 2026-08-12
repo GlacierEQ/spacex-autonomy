@@ -19,6 +19,12 @@ REQUIRED_EVIDENCE: Final = (
     "unverified_scope:",
     "relationships:",
 )
+REQUIRED_BOUNDARY: Final = (
+    "This is an independent portfolio project",
+    "does not claim SpaceX employment, endorsement, affiliation",
+    "It does not contact a vehicle, network, provider, or external control system",
+    "Simulation output is not operational flight guidance",
+)
 FORBIDDEN_CLAIMS: Final = (
     "sub-millisecond latency",
     "sub-100μs",
@@ -28,6 +34,33 @@ FORBIDDEN_CLAIMS: Final = (
     "no heap allocation in the hot path",
     "Byzantine fault-tolerant",
     "MCP Tool Exposure",
+)
+# These expressions are evaluated only on visible lines that are not explicit
+# negations/limitations. They prevent an appended affirmative operational claim
+# from coexisting with the repository's required non-flight boundary language.
+FORBIDDEN_AFFIRMATIVE_PATTERNS: Final = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"\b(?:controls?|commands?)\b.{0,40}\b(?:vehicle|actuator|flight computer)\b",
+        r"\boperational\b.{0,30}\b(?:flight|launch|re-entry|reentry|landing|abort)\b",
+        r"\bproduction deployment\b",
+        r"\bSpaceX\b.{0,30}\b(?:internal|proprietary|production)\b",
+        r"\bflight[- ](?:ready|proven|validated)\b",
+        r"\bvalidated mission thresholds?\b",
+    )
+)
+NEGATION_MARKERS: Final = (
+    " no ",
+    " not ",
+    "does not",
+    "do not",
+    "is not",
+    "are not",
+    "cannot",
+    "without",
+    "unverified",
+    "blocked",
+    "limitation",
 )
 LOCAL_PATH = re.compile(
     r"file:///|/Users/|[A-Za-z]:\\Users\\|/(?:home|root|tmp|var|private|mnt)/[^\s)`\]}>]+|(?<![A-Za-z0-9_])~/",
@@ -52,6 +85,23 @@ def _visible_lines(text: str) -> Iterator[tuple[int, str]]:
             continue
         if fence_character is None:
             yield line_number, line
+
+
+def _is_explicit_boundary_line(line: str) -> bool:
+    normalized = f" {line.strip().casefold()} "
+    return any(marker in normalized for marker in NEGATION_MARKERS)
+
+
+def _contradictory_claims(text: str) -> tuple[str, ...]:
+    findings: list[str] = []
+    for line_number, line in _visible_lines(text):
+        if _is_explicit_boundary_line(line):
+            continue
+        for pattern in FORBIDDEN_AFFIRMATIVE_PATTERNS:
+            if pattern.search(line):
+                findings.append(f"line {line_number + 1}: {line.strip()}")
+                break
+    return tuple(findings)
 
 
 def verify_readme(path: Path) -> tuple[str, ...]:
@@ -82,10 +132,18 @@ def verify_readme(path: Path) -> tuple[str, ...]:
     if absent_evidence:
         errors.append(f"machine contract is incomplete: {absent_evidence}")
 
+    absent_boundary = [value for value in REQUIRED_BOUNDARY if value not in text]
+    if absent_boundary:
+        errors.append(f"public authority boundary is incomplete: {absent_boundary}")
+
     visible_text = "\n".join(line for _, line in _visible_lines(text)).casefold()
     forbidden = [claim for claim in FORBIDDEN_CLAIMS if claim.casefold() in visible_text]
     if forbidden:
         errors.append(f"README contains unsupported public claims: {forbidden}")
+
+    contradictions = _contradictory_claims(text)
+    if contradictions:
+        errors.append(f"README contains contradictory authority claims: {list(contradictions)}")
     return tuple(errors)
 
 
