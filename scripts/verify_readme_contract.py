@@ -36,12 +36,13 @@ FORBIDDEN_CLAIMS: Final = (
     "MCP Tool Exposure",
 )
 # These expressions are evaluated only on visible lines that are not explicit
-# negations/limitations. They prevent an appended affirmative operational claim
-# from coexisting with the repository's required non-flight boundary language.
+# negations/limitations. They reject affirmative operational-authority claims
+# without treating descriptive phrases such as "bounded position control" next
+# to "multi-vehicle consensus" as hardware-control assertions.
 FORBIDDEN_AFFIRMATIVE_PATTERNS: Final = tuple(
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
-        r"\b(?:controls?|commands?)\b.{0,40}\b(?:vehicle|actuator|flight computer)\b",
+        r"\b(?:this system|the system|software|toolkit|service|controller)\s+(?:controls?|commands?)\b.{0,40}\b(?:vehicle|actuator|flight computer)\b",
         r"\boperational\b.{0,30}\b(?:flight|launch|re-entry|reentry|landing|abort)\b",
         r"\bproduction deployment\b",
         r"\bSpaceX\b.{0,30}\b(?:internal|proprietary|production)\b",
