@@ -62,9 +62,7 @@ def test_machine_state_requires_external_current_head_receipt() -> None:
         "PUBLIC_README_BOUNDARY",
     ):
         assert state["gates"][gate] == "REQUIRES_CURRENT_HEAD_RECEIPT"
-    assert state["gates"]["GO_NATIVE_BUILD_AND_RACE_TEST"] == (
-        "REQUIRES_CURRENT_HEAD_RACE_RECEIPT"
-    )
+    assert state["gates"]["GO_NATIVE_BUILD_AND_RACE_TEST"] == "REQUIRES_CURRENT_HEAD_RACE_RECEIPT"
     assert state["gates"]["EXTERNAL_COMMAND_AUTHORITY"] == "NOT_CLAIMED"
     assert state["gates"]["PRODUCTION_DEPLOYMENT"] == "NOT_PROVEN"
     receipt = state["proof_receipt"]
