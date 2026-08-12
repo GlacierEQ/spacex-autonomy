@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Final
 
-SCHEMA: Final = "glaciereq.spacex-autonomy.go-test-receipt.v1"
+SCHEMA: Final = "glaciereq.spacex-autonomy.go-test-receipt.v2"
 MAX_GO_TEST_BYTES: Final = 10 * 1024 * 1024
 
 
@@ -40,16 +40,20 @@ def verify_go_test_json(
     go_test_exit_code: int,
     commit_sha: str,
     go_version: str,
+    race_enabled: bool,
 ) -> dict[str, Any]:
     receipt: dict[str, Any] = {
         "schema": SCHEMA,
         "commit_sha": commit_sha,
         "go_version": go_version,
         "go_test_exit_code": go_test_exit_code,
+        "race_enabled": bool(race_enabled),
         "conclusion": "FAILED",
         "evidence_level": "NONE",
     }
     try:
+        if not race_enabled:
+            raise ValueError("Go TEST evidence requires race-enabled execution")
         size = report_path.stat().st_size
         if size > MAX_GO_TEST_BYTES:
             raise ValueError(f"Go test report exceeds {MAX_GO_TEST_BYTES} bytes")
@@ -66,6 +70,8 @@ def verify_go_test_json(
             if not line.strip():
                 continue
             event = json.loads(line)
+            if not isinstance(event, dict):
+                raise ValueError(f"line {line_number} is not an object")
             action = event.get("Action")
             test_name = event.get("Test")
             if test_name:
@@ -77,8 +83,6 @@ def verify_go_test_json(
                     skipped += 1
             elif action == "fail" and event.get("Package"):
                 packages_failed += 1
-            if not isinstance(event, dict):
-                raise ValueError(f"line {line_number} is not an object")
 
         receipt.update(
             {
@@ -107,12 +111,15 @@ def verify_go_test_json(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build a TEST receipt from go test -json")
+    parser = argparse.ArgumentParser(
+        description="Build a TEST receipt from race-enabled go test -json"
+    )
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--go-test-exit-code", type=int, required=True)
     parser.add_argument("--commit-sha", required=True)
     parser.add_argument("--go-version", required=True)
+    parser.add_argument("--race-enabled", action="store_true", required=True)
     return parser
 
 
@@ -124,6 +131,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         go_test_exit_code=namespace.go_test_exit_code,
         commit_sha=namespace.commit_sha,
         go_version=namespace.go_version,
+        race_enabled=namespace.race_enabled,
     )
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0 if receipt["conclusion"] == "VERIFIED" else 1
