@@ -5,6 +5,8 @@
     "deterministic-local-autonomy-mode-policy-and-hysteresis",
     "one-dimensional-state-estimation-and-bounded-position-control",
     "weighted-local-multi-vehicle-estimate-fusion",
-    "concurrency-safe-go-phase-threshold-simulation"
+    "concurrency-safe-go-phase-threshold-simulation",
+    "simulated-mission-thread-go-hold-quorum",
+    "conflict-preserving-hold-reason-receipt"
   ]
 }
