@@ -4,7 +4,9 @@
 Content-checks shipped mechanism CALL outputs only.
 Never import-only, class-name-only, field-echo, or sample-string theater.
 """
+
 from __future__ import annotations
+
 import importlib
 import inspect
 import json
@@ -18,52 +20,209 @@ sys.path.insert(0, str(ROOT / "src"))
 MOD = "hybrid_autonomy"
 
 # Structured keys that look like real mechanism output
-_CONTENT_KEYS = frozenset({
-    "ok", "status", "result", "plan", "path", "health", "health_index",
-    "decision", "allowed", "util", "confidence", "fingerprint", "digest",
-    "reason", "error", "stations", "mbps", "cost", "stage", "holds",
-    "assignments", "connectors", "public_count", "score", "margin", "jobs",
-    "samples", "receipt", "state", "can_vote", "bytes_in", "bytes_out",
-    "savings_pct", "sha256", "canonical_uri", "measurement_unit", "agents",
-    "available", "verdict", "token_fp", "mac", "chain", "payload_keys",
-})
+_CONTENT_KEYS = frozenset(
+    {
+        "ok",
+        "status",
+        "result",
+        "plan",
+        "path",
+        "health",
+        "health_index",
+        "decision",
+        "allowed",
+        "util",
+        "confidence",
+        "fingerprint",
+        "digest",
+        "reason",
+        "error",
+        "stations",
+        "mbps",
+        "cost",
+        "stage",
+        "holds",
+        "assignments",
+        "connectors",
+        "public_count",
+        "score",
+        "margin",
+        "jobs",
+        "samples",
+        "receipt",
+        "state",
+        "can_vote",
+        "bytes_in",
+        "bytes_out",
+        "savings_pct",
+        "sha256",
+        "canonical_uri",
+        "measurement_unit",
+        "agents",
+        "available",
+        "verdict",
+        "token_fp",
+        "mac",
+        "chain",
+        "payload_keys",
+    }
+)
 # Field-name / sample-echo denylist (never content_checked as a bare value)
-_FIELD_ECHO_NAMES = frozenset({
-    "capabilities", "status", "state", "health", "connectors", "registry",
-    "config", "summary", "metrics", "path", "body_digest", "mac", "name",
-    "label", "obj", "text", "action", "connector",
-})
-_SKIP_FNS = frozenset({
-    "main", "cli", "app", "run_server", "serve", "dataclass", "field",
-    "asdict", "astuple", "replace", "NamedTuple", "TypedDict", "Enum",
-    "Path", "annotations", "IntEnum", "StrEnum", "auto", "unique",
-    "overload", "final", "runtime_checkable", "cast", "get_args",
-    "get_origin", "get_type_hints", "dataclass_transform",
-})
+_FIELD_ECHO_NAMES = frozenset(
+    {
+        "capabilities",
+        "status",
+        "state",
+        "health",
+        "connectors",
+        "registry",
+        "config",
+        "summary",
+        "metrics",
+        "path",
+        "body_digest",
+        "mac",
+        "name",
+        "label",
+        "obj",
+        "text",
+        "action",
+        "connector",
+    }
+)
+_SKIP_FNS = frozenset(
+    {
+        "main",
+        "cli",
+        "app",
+        "run_server",
+        "serve",
+        "dataclass",
+        "field",
+        "asdict",
+        "astuple",
+        "replace",
+        "NamedTuple",
+        "TypedDict",
+        "Enum",
+        "Path",
+        "annotations",
+        "IntEnum",
+        "StrEnum",
+        "auto",
+        "unique",
+        "overload",
+        "final",
+        "runtime_checkable",
+        "cast",
+        "get_args",
+        "get_origin",
+        "get_type_hints",
+        "dataclass_transform",
+    }
+)
 # Real mechanism callables only (not dataclass field names)
 _PREFERRED_FNS = (
-    "build_stack", "smoke", "create", "default", "run", "evaluate",
-    "schedule", "health_index", "plan", "decide", "check", "fingerprint",
-    "compile", "shortest_path", "authorize", "process", "bound",
-    "simulate_rack", "anomaly_score", "thermal_margin", "summary",
-    "allow_claim", "max_claim_for", "max_stage", "externalize", "measure",
-    "verify", "resolve", "optimize", "mint", "dispatch", "assign_task",
-    "get_status", "register_agent", "analyze", "observe", "certify",
-    "classify", "all_ok", "promote", "record", "assert_claim", "apply",
-    "apply_batch", "encode_batch", "export_recommendation", "place",
-    "fleet", "mode", "budget", "shed", "outlet", "control_loop",
-    "miss_distance_km", "boiloff_rate_kg_s", "compact_session",
-    "flagship_count", "all_present", "verify_manifest",
+    "build_stack",
+    "smoke",
+    "create",
+    "default",
+    "run",
+    "evaluate",
+    "schedule",
+    "health_index",
+    "plan",
+    "decide",
+    "check",
+    "fingerprint",
+    "compile",
+    "shortest_path",
+    "authorize",
+    "process",
+    "bound",
+    "simulate_rack",
+    "anomaly_score",
+    "thermal_margin",
+    "summary",
+    "allow_claim",
+    "max_claim_for",
+    "max_stage",
+    "externalize",
+    "measure",
+    "verify",
+    "resolve",
+    "optimize",
+    "mint",
+    "dispatch",
+    "assign_task",
+    "get_status",
+    "register_agent",
+    "analyze",
+    "observe",
+    "certify",
+    "classify",
+    "all_ok",
+    "promote",
+    "record",
+    "assert_claim",
+    "apply",
+    "apply_batch",
+    "encode_batch",
+    "export_recommendation",
+    "place",
+    "fleet",
+    "mode",
+    "budget",
+    "shed",
+    "outlet",
+    "control_loop",
+    "miss_distance_km",
+    "boiloff_rate_kg_s",
+    "compact_session",
+    "flagship_count",
+    "all_present",
+    "verify_manifest",
 )
 _PREFERRED_METHS = (
-    "assign_task", "get_status", "register_agent", "mint", "verify",
-    "fingerprint", "dispatch", "evaluate", "compile", "analyze",
-    "observe", "certify", "classify", "all_ok", "promote", "record",
-    "assert_claim", "apply", "apply_batch", "run", "process", "plan",
-    "decide", "check", "authorize", "bound", "health_index", "schedule",
-    "allocate", "capabilities",  # only as CALLABLE method (CapabilityTwin)
-    "health", "connectors", "summary", "content_digest", "key", "replay_hashes",
-    "reverse_diff", "upsert_base", "invoke",
+    "assign_task",
+    "get_status",
+    "register_agent",
+    "mint",
+    "verify",
+    "fingerprint",
+    "dispatch",
+    "evaluate",
+    "compile",
+    "analyze",
+    "observe",
+    "certify",
+    "classify",
+    "all_ok",
+    "promote",
+    "record",
+    "assert_claim",
+    "apply",
+    "apply_batch",
+    "run",
+    "process",
+    "plan",
+    "decide",
+    "check",
+    "authorize",
+    "bound",
+    "health_index",
+    "schedule",
+    "allocate",
+    "capabilities",  # only as CALLABLE method (CapabilityTwin)
+    "health",
+    "connectors",
+    "summary",
+    "content_digest",
+    "key",
+    "replay_hashes",
+    "reverse_diff",
+    "upsert_base",
+    "invoke",
 )
 _DEFERRED_FNS = ("digest",)  # weak helper — last resort after real ops
 
@@ -101,6 +260,7 @@ def _contentful(value, *, called_name: str | None = None) -> bool:
         return False
     try:
         import enum
+
         if isinstance(value, enum.Enum):
             # bare enum from a field is weak; allow only when method likely returns status
             if called_name in {"status", "decide", "check", "verdict", "state"}:
@@ -210,6 +370,7 @@ def _build_dataclass_sample(cls, mod=None):
     except Exception:
         return None
     import enum
+
     kwargs = {}
     for name, p in sig.parameters.items():
         if name == "self":
@@ -230,9 +391,14 @@ def _build_dataclass_sample(cls, mod=None):
         elif _ann_has_type(al, "str"):
             # use distinctive non-field-echo sample
             kwargs[name] = "sample_%s" % name
-        elif any(_ann_has_type(al, t) for t in ("list", "set", "tuple", "sequence", "iterable", "frozenset")):
+        elif any(
+            _ann_has_type(al, t)
+            for t in ("list", "set", "tuple", "sequence", "iterable", "frozenset")
+        ):
             if _ann_has_type(al, "frozenset") or _ann_has_type(al, "set"):
-                kwargs[name] = frozenset({"read"}) if "cap" in name or "capabilit" in name else set()
+                kwargs[name] = (
+                    frozenset({"read"}) if "cap" in name or "capabilit" in name else set()
+                )
             else:
                 kwargs[name] = []
         elif _ann_has_type(al, "dict") or _ann_has_type(al, "mapping"):
@@ -258,7 +424,8 @@ def _sample_args(fn, mod):
         yield ()
         return
     required = [
-        p for p in sig.parameters.values()
+        p
+        for p in sig.parameters.values()
         if p.name != "self"
         and p.default is inspect.Parameter.empty
         and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
@@ -279,11 +446,16 @@ def _sample_args(fn, mod):
         if resolved is not None and inspect.isclass(resolved) and issubclass(resolved, enum.Enum):
             simple.append(next(iter(resolved)))
             continue
-        if "callable[" in al or al.strip() in {"callable", "typing.callable"} or "decisionfn" in al.replace(" ", ""):
+        if (
+            "callable[" in al
+            or al.strip() in {"callable", "typing.callable"}
+            or "decisionfn" in al.replace(" ", "")
+        ):
             simple.append(lambda *a, **k: (False, "REFUSED"))
             continue
         if p.name in ("decide", "decision", "handler", "callback") and not any(
-            _ann_has_type(al, t) for t in ("list", "sequence", "iterable", "dict", "str", "int", "float")
+            _ann_has_type(al, t)
+            for t in ("list", "sequence", "iterable", "dict", "str", "int", "float")
         ):
             simple.append(lambda *a, **k: (False, "REFUSED"))
             continue
@@ -307,7 +479,11 @@ def _sample_args(fn, mod):
             simple.append(frozenset({"read"}))
         elif _ann_has_type(al, "mapping") or _ann_has_type(al, "dict"):
             simple.append({"k": 1})
-        elif _ann_has_type(al, "path") or p.name in ("dest", "root", "allowed_root") or resolved is _Path:
+        elif (
+            _ann_has_type(al, "path")
+            or p.name in ("dest", "root", "allowed_root")
+            or resolved is _Path
+        ):
             simple.append(_Path(tempfile.mkdtemp(prefix="elite_op_")))
         elif _ann_has_type(al, "float"):
             simple.append(1.0 if p.name not in ("not_after",) else 1e12)
@@ -315,7 +491,15 @@ def _sample_args(fn, mod):
             simple.append(False)
         elif _ann_has_type(al, "int"):
             simple.append(1)
-        elif _ann_has_type(al, "str") or p.name in ("connector", "action", "name", "body", "label", "path", "capability"):
+        elif _ann_has_type(al, "str") or p.name in (
+            "connector",
+            "action",
+            "name",
+            "body",
+            "label",
+            "path",
+            "capability",
+        ):
             if p.name == "connector":
                 simple.append("__operate_sample__")
             elif p.name in ("body", "text"):
@@ -354,7 +538,12 @@ def _sample_args(fn, mod):
             for n, obj in inspect.getmembers(mod, inspect.isclass):
                 if n.startswith("_"):
                     continue
-                if n.lower() in a0.lower() or "job" in n.lower() or "sample" in n.lower() or "need" in n.lower():
+                if (
+                    n.lower() in a0.lower()
+                    or "job" in n.lower()
+                    or "sample" in n.lower()
+                    or "need" in n.lower()
+                ):
                     inst = _build_dataclass_sample(obj, mod)
                     if inst is not None:
                         second = 1.0 if "float" in a1.lower() or p1.name.endswith("mw") else 1
@@ -369,9 +558,12 @@ def _sample_args(fn, mod):
         r0 = _resolve_type(required[0].annotation, mod)
         r1 = _resolve_type(required[1].annotation, mod)
         if (
-            r0 is not None and r1 is not None
-            and inspect.isclass(r0) and inspect.isclass(r1)
-            and issubclass(r0, enum.Enum) and issubclass(r1, enum.Enum)
+            r0 is not None
+            and r1 is not None
+            and inspect.isclass(r0)
+            and inspect.isclass(r1)
+            and issubclass(r0, enum.Enum)
+            and issubclass(r1, enum.Enum)
         ):
             yield (next(iter(r0)), list(r1)[-1])
             yield (next(iter(r0)), next(iter(r1)))
@@ -393,7 +585,9 @@ def _try_fn(mod, attr, fn):
                 "kind": "fn",
                 "name": attr,
                 "args": [repr(a)[:40] for a in args],
-                "result": result if not isinstance(result, (bytes, bytearray)) else repr(result)[:200],
+                "result": result
+                if not isinstance(result, (bytes, bytearray))
+                else repr(result)[:200],
                 "content_checked": True,
                 "invoked": True,
             }
@@ -412,7 +606,9 @@ def _try_method(inst, cname, meth, mod):
                 "name": cname,
                 "method": meth,
                 "args": [repr(a)[:40] for a in args],
-                "result": result if not isinstance(result, (bytes, bytearray)) else repr(result)[:200],
+                "result": result
+                if not isinstance(result, (bytes, bytearray))
+                else repr(result)[:200],
                 "module_local": True,
                 "content_checked": True,
                 "invoked": True,
@@ -424,7 +620,8 @@ def _class_method_score(cls) -> int:
     """Prefer engines with real methods over pure dataclass records."""
     try:
         methods = [
-            n for n, v in inspect.getmembers(cls, predicate=callable)
+            n
+            for n, v in inspect.getmembers(cls, predicate=callable)
             if not n.startswith("_") and n not in {"from_dict", "to_dict"}
         ]
     except Exception:
@@ -437,9 +634,24 @@ def _class_method_score(cls) -> int:
     # boost known engine names
     name = cls.__name__.lower()
     for hint in (
-        "coordinator", "mint", "runtime", "engine", "quorum", "matrix",
-        "ledger", "fence", "sentinel", "monitor", "compiler", "router",
-        "twin", "gate", "bus", "allocator", "certifier", "harness",
+        "coordinator",
+        "mint",
+        "runtime",
+        "engine",
+        "quorum",
+        "matrix",
+        "ledger",
+        "fence",
+        "sentinel",
+        "monitor",
+        "compiler",
+        "router",
+        "twin",
+        "gate",
+        "bus",
+        "allocator",
+        "certifier",
+        "harness",
     ):
         if hint in name:
             score += 10
@@ -450,7 +662,8 @@ def _construct(cls, mod):
     try:
         sig = inspect.signature(cls)
         required = [
-            p for p in sig.parameters.values()
+            p
+            for p in sig.parameters.values()
             if p.name != "self"
             and p.default is inspect.Parameter.empty
             and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
@@ -489,6 +702,7 @@ def _construct(cls, mod):
             if resolved is not None and inspect.isclass(resolved):
                 try:
                     import enum
+
                     if issubclass(resolved, enum.Enum):
                         args.append(next(iter(resolved)))
                         continue
@@ -527,7 +741,8 @@ def _smoke(mod):
 
     # 2) Module-local classes — CALL methods only (never bare field reads)
     members = [
-        (n, c) for n, c in inspect.getmembers(mod, inspect.isclass)
+        (n, c)
+        for n, c in inspect.getmembers(mod, inspect.isclass)
         if not n.startswith("_") and _is_local_class(mod, c)
     ]
     # skip pure Enums
@@ -535,6 +750,7 @@ def _smoke(mod):
     for cname, obj in members:
         try:
             import enum
+
             if inspect.isclass(obj) and issubclass(obj, enum.Enum):
                 continue
         except Exception:
@@ -579,9 +795,7 @@ def _smoke(mod):
             return hit
 
     public = [n for n in dir(mod) if not n.startswith("_")]
-    raise RuntimeError(
-        "no content-checked mechanism CALL; public=%s" % (public[:12],)
-    )
+    raise RuntimeError("no content-checked mechanism CALL; public=%s" % (public[:12],))
 
 
 def main() -> int:
@@ -591,7 +805,9 @@ def main() -> int:
         ok = (
             bool(smoke.get("content_checked"))
             and bool(smoke.get("invoked"))
-            and _contentful(smoke.get("result"), called_name=smoke.get("method") or smoke.get("name"))
+            and _contentful(
+                smoke.get("result"), called_name=smoke.get("method") or smoke.get("name")
+            )
         )
     except Exception as e:
         out = {

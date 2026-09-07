@@ -16,8 +16,7 @@ And it fits in 100 lines of Python.
 
 import math
 import time
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -57,15 +56,14 @@ class StateVector:
 
     @property
     def speed(self) -> float:
-        return math.sqrt(self.vx ** 2 + self.vy ** 2 + self.vz ** 2)
+        return math.sqrt(self.vx**2 + self.vy**2 + self.vz**2)
 
     @property
     def altitude(self) -> float:
         return self.z
 
     def as_array(self) -> list[float]:
-        return [self.x, self.y, self.z, self.vx, self.vy, self.vz,
-                self.roll, self.pitch, self.yaw]
+        return [self.x, self.y, self.z, self.vx, self.vy, self.vz, self.roll, self.pitch, self.yaw]
 
 
 class KalmanFilter:
@@ -86,8 +84,10 @@ class KalmanFilter:
             self.H[i][i] = 1.0
 
     def predict(self, dt: float):
-        F = [[1.0 if i == j else (dt if i == j + 3 and i < 3 else 0.0)
-              for j in range(self.n)] for i in range(self.n)]
+        F = [
+            [1.0 if i == j else (dt if i == j + 3 and i < 3 else 0.0) for j in range(self.n)]
+            for i in range(self.n)
+        ]
 
         new_x = _mat_vec_mul(F, self.x)
         self.x = new_x
@@ -116,14 +116,20 @@ class KalmanFilter:
         I_KH = _mat_sub(_identity(self.n), _pad_matrix(KH, self.n, self.n))
         self.P = _mat_mul(I_KH, self.P)
 
-        innovation_norm = math.sqrt(sum(v ** 2 for v in y))
+        innovation_norm = math.sqrt(sum(v**2 for v in y))
         self._innovation_log.append(innovation_norm)
 
     def get_state(self) -> StateVector:
         return StateVector(
-            x=self.x[0], y=self.x[1], z=self.x[2],
-            vx=self.x[3], vy=self.x[4], vz=self.x[5],
-            roll=self.x[6], pitch=self.x[7], yaw=self.x[8],
+            x=self.x[0],
+            y=self.x[1],
+            z=self.x[2],
+            vx=self.x[3],
+            vy=self.x[4],
+            vz=self.x[5],
+            roll=self.x[6],
+            pitch=self.x[7],
+            yaw=self.x[8],
         )
 
     @property
@@ -223,13 +229,13 @@ class ComplementaryFilter:
         self._yaw = 0.0
         self._last_time: float = 0.0
 
-    def update(self, imu: IMUReading, gps: Optional[GPSReading] = None) -> StateVector:
+    def update(self, imu: IMUReading, gps: GPSReading | None = None) -> StateVector:
         now = imu.timestamp if imu.timestamp > 0 else time.time()
 
         if self._last_time == 0:
             self._last_time = now
             accel_roll = math.atan2(imu.accel_y, imu.accel_z)
-            accel_pitch = math.atan2(-imu.accel_x, math.sqrt(imu.accel_y ** 2 + imu.accel_z ** 2))
+            accel_pitch = math.atan2(-imu.accel_x, math.sqrt(imu.accel_y**2 + imu.accel_z**2))
             self._roll = accel_roll
             self._pitch = accel_pitch
             self._yaw = 0.0
@@ -239,7 +245,7 @@ class ComplementaryFilter:
         self._last_time = now
 
         accel_roll = math.atan2(imu.accel_y, imu.accel_z)
-        accel_pitch = math.atan2(-imu.accel_x, math.sqrt(imu.accel_y ** 2 + imu.accel_z ** 2))
+        accel_pitch = math.atan2(-imu.accel_x, math.sqrt(imu.accel_y**2 + imu.accel_z**2))
 
         self._roll = self.alpha * (self._roll + imu.gyro_x * dt) + (1 - self.alpha) * accel_roll
         self._pitch = self.alpha * (self._pitch + imu.gyro_y * dt) + (1 - self.alpha) * accel_pitch
@@ -253,8 +259,12 @@ class ComplementaryFilter:
             x=gps.lon if gps else 0.0,
             y=gps.lat if gps else 0.0,
             z=gps.alt if gps else 0.0,
-            vx=vx, vy=vy, vz=vz,
-            roll=self._roll, pitch=self._pitch, yaw=self._yaw,
+            vx=vx,
+            vy=vy,
+            vz=vz,
+            roll=self._roll,
+            pitch=self._pitch,
+            yaw=self._yaw,
         )
 
 

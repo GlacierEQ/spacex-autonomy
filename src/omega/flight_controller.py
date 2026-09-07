@@ -7,9 +7,9 @@ Fault detection, isolation, and reconfiguration.
 
 import math
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Callable, Optional
 
 from alpha.state_estimator import StateVector
 
@@ -54,8 +54,7 @@ class PIDController:
         p = self.gains.kp * error
 
         self._integral += error * dt
-        self._integral = max(-self.gains.integral_max,
-                             min(self.gains.integral_max, self._integral))
+        self._integral = max(-self.gains.integral_max, min(self.gains.integral_max, self._integral))
         i = self.gains.ki * self._integral
 
         derivative = (error - self._prev_error) / dt
@@ -150,12 +149,14 @@ class TrajectoryTracker:
         self._trajectory = sorted(trajectory, key=lambda x: x[0])
         self._current_idx = 0
 
-    def get_target(self, time_s: float) -> Optional[StateVector]:
+    def get_target(self, time_s: float) -> StateVector | None:
         if not self._trajectory:
             return None
 
-        while (self._current_idx < len(self._trajectory) - 1 and
-               self._trajectory[self._current_idx + 1][0] <= time_s):
+        while (
+            self._current_idx < len(self._trajectory) - 1
+            and self._trajectory[self._current_idx + 1][0] <= time_s
+        ):
             self._current_idx += 1
 
         if self._current_idx >= len(self._trajectory) - 1:
@@ -192,9 +193,8 @@ class FaultManager:
         self._recovery_callbacks.append(callback)
 
     def detect_fault(
-        self, subsystem: str, metric: float,
-        threshold: float, fault_type: FaultType
-    ) -> Optional[FaultEvent]:
+        self, subsystem: str, metric: float, threshold: float, fault_type: FaultType
+    ) -> FaultEvent | None:
         if metric > threshold:
             if subsystem in self._active_faults:
                 return None
@@ -268,7 +268,7 @@ class FlightController:
         current: StateVector,
         target: StateVector,
         time_s: float = 0.0,
-    ) -> Optional[ControlCommand]:
+    ) -> ControlCommand | None:
         if not self._enabled:
             return None
 

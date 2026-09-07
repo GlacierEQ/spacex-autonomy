@@ -16,8 +16,7 @@ create depth perception. Multiple vehicles create spatial awareness.
 
 import math
 import time
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -75,7 +74,7 @@ class DistributedStateEstimator:
     def update_estimate(self, estimate: VehicleEstimate):
         self._estimates[estimate.vehicle_id] = estimate
 
-    def compute_consensus(self) -> Optional[ConsensusState]:
+    def compute_consensus(self) -> ConsensusState | None:
         if not self._estimates:
             return None
 
@@ -122,9 +121,7 @@ class DistributedStateEstimator:
         if not self._estimates:
             return {"quality": 0, "vehicles": 0}
 
-        uncertainties = [
-            sum(e.uncertainty_xyz) / 3 for e in self._estimates.values()
-        ]
+        uncertainties = [sum(e.uncertainty_xyz) / 3 for e in self._estimates.values()]
         avg_uncertainty = sum(uncertainties) / len(uncertainties)
         avg_confidence = sum(e.confidence for e in self._estimates.values()) / len(self._estimates)
 
@@ -155,15 +152,14 @@ class ObservationFuser:
 
         cutoff = time.time() - 300
         self._observations[obs.target_id] = [
-            o for o in self._observations[obs.target_id]
-            if o.timestamp > cutoff
+            o for o in self._observations[obs.target_id] if o.timestamp > cutoff
         ]
 
     def triangulate(
         self,
         target_id: int,
         observer_positions: dict[int, tuple[float, float, float]],
-    ) -> Optional[dict]:
+    ) -> dict | None:
         observations = self._observations.get(target_id, [])
         if len(observations) < 2:
             return None
@@ -180,12 +176,14 @@ class ObservationFuser:
             dy = obs.range_m * math.cos(el) * math.cos(az)
             dz = obs.range_m * math.sin(el)
 
-            position_estimates.append({
-                "x": ox + dx,
-                "y": oy + dy,
-                "z": oz + dz,
-                "quality": obs.quality,
-            })
+            position_estimates.append(
+                {
+                    "x": ox + dx,
+                    "y": oy + dy,
+                    "z": oz + dz,
+                    "quality": obs.quality,
+                }
+            )
 
         if len(position_estimates) < 2:
             return None
@@ -200,7 +198,7 @@ class ObservationFuser:
             dx = p["x"] - fused_x
             dy = p["y"] - fused_y
             dz = p["z"] - fused_z
-            uncertainties.append(math.sqrt(dx ** 2 + dy ** 2 + dz ** 2))
+            uncertainties.append(math.sqrt(dx**2 + dy**2 + dz**2))
 
         avg_uncertainty = sum(uncertainties) / len(uncertainties)
 
@@ -211,7 +209,9 @@ class ObservationFuser:
             "z": fused_z,
             "uncertainty_m": avg_uncertainty,
             "observations_used": len(position_estimates),
-            "improvement_factor": max(uncertainties) / avg_uncertainty if avg_uncertainty > 0 else 1,
+            "improvement_factor": max(uncertainties) / avg_uncertainty
+            if avg_uncertainty > 0
+            else 1,
         }
 
 
@@ -264,7 +264,7 @@ class SwarmConsensusProtocol:
         self,
         proposal_idx: int,
         votes: list[dict],
-    ) -> Optional[dict]:
+    ) -> dict | None:
         relevant_votes = [v for v in votes if v.get("proposal_idx") == proposal_idx]
         agree_weight = sum(v["weight"] for v in relevant_votes if v.get("agree", False))
         total_weight = sum(v["weight"] for v in relevant_votes)
@@ -275,7 +275,9 @@ class SwarmConsensusProtocol:
         agreement_ratio = agree_weight / total_weight
 
         if agreement_ratio > 0.67 and len(relevant_votes) >= self.min_agreement:
-            proposal = self._proposals[proposal_idx] if proposal_idx < len(self._proposals) else None
+            proposal = (
+                self._proposals[proposal_idx] if proposal_idx < len(self._proposals) else None
+            )
             if proposal:
                 return {
                     "consensus_reached": True,
@@ -330,7 +332,9 @@ class MultiVehicleConsensusSystem:
                 "z": consensus.z,
                 "uncertainty": consensus.uncertainty,
                 "participants": consensus.participants,
-            } if consensus else None,
+            }
+            if consensus
+            else None,
             "quality": quality,
             "vehicles_reporting": quality["vehicles"],
             "consensus_confidence": consensus.confidence if consensus else 0,
