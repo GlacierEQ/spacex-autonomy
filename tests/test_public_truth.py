@@ -12,6 +12,8 @@ APPROVED_CAPABILITIES = [
     "one-dimensional-state-estimation-and-bounded-position-control",
     "weighted-local-multi-vehicle-estimate-fusion",
     "concurrency-safe-go-phase-threshold-simulation",
+    "simulated-mission-thread-go-hold-quorum",
+    "conflict-preserving-hold-reason-receipt",
 ]
 APPROVED_SCOPE = [
     "deterministic Python autonomy mode policy and hysteresis",
@@ -19,6 +21,8 @@ APPROVED_SCOPE = [
     "bounded local position-control simulation",
     "weighted multi-vehicle estimate fusion",
     "concurrency-safe Go phase and threshold simulation",
+    "weighted simulated GO/HOLD mission-thread quorum",
+    "high-confidence HOLD veto and explicit hold-reason compilation",
 ]
 APPROVED_NONCLAIMS = [
     "no SpaceX affiliation, endorsement, employment, or proprietary access",
@@ -91,5 +95,5 @@ def test_target_contract_is_an_exact_allowlist() -> None:
         "exact_canonical_head_required": True,
     }
     assert contract["next_gate"] == (
-        "exact-current-head Python receipts plus Go race-enabled native receipt"
+        "exact-current-head Python receipts including mission-thread quorum plus Go race-enabled native receipt"
     )
