@@ -59,6 +59,7 @@ jobs:
             scripts/verify_readme_contract.py
             tests/test_autonomy.py
             tests/test_core.py
+            tests/test_mission_thread.py
             tests/test_verification.py
             tests/test_public_truth.py
           )

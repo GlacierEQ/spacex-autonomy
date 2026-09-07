@@ -24,7 +24,9 @@
     "deterministic-local-autonomy-mode-policy-and-hysteresis",
     "one-dimensional-state-estimation-and-bounded-position-control",
     "weighted-local-multi-vehicle-estimate-fusion",
-    "concurrency-safe-go-phase-threshold-simulation"
+    "concurrency-safe-go-phase-threshold-simulation",
+    "simulated-mission-thread-go-hold-quorum",
+    "conflict-preserving-hold-reason-receipt"
   ],
   "nonclaims": [
     "no SpaceX affiliation or proprietary access",
@@ -46,5 +48,10 @@
     "binding_rule": "admission authority must record successful current-head Python 3.11/3.12/3.13 and Go native jobs whose workflow head_sha equals the canonical repository head; the Go receipt must record race_enabled=true; source state never self-asserts its own future CI outcome"
   },
   "evolution_cursor": "next:current_head_native_proof_then_canonical_position_resolution",
-  "updated_at": "2026-08-11T13:36:00-10:00"
+  "updated_at": "2026-08-11T13:36:00-10:00",
+  "current_head_extension": {
+    "mechanism": "src/spacex_autonomy/mission_thread.py",
+    "tests": "tests/test_mission_thread.py",
+    "state": "IMPLEMENTED_CURRENT_HEAD_RECEIPT_REQUIRED"
+  }
 }

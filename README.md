@@ -20,7 +20,7 @@ Autonomous systems need more than dramatic mission language. They need explicit 
 
 This repository demonstrates those principles through two native implementation boundaries:
 
-- **Python simulation package** — chooses `MANUAL`, `ASSIST`, or `AUTO`; estimates position and velocity; produces a bounded control command; and optionally fuses peer estimates.
+- **Python simulation package** — chooses `MANUAL`, `ASSIST`, or `AUTO`; estimates position and velocity; produces a bounded control command; optionally fuses peer estimates; and now compiles conflicting simulated subsystem votes into a deterministic `GO | HOLD` mission-thread quorum.
 - **Go phase-state package** — validates sensor readings, enforces legal phase transitions, computes threshold-based abort scores, and remains safe under concurrent inspection and updates.
 
 The original repository contained valuable prototypes but also unsupported performance, integration, and operational claims. This promotion narrows the public story to what can be compiled, tested, inspected, and reproduced.
@@ -40,6 +40,7 @@ The original repository contained valuable prototypes but also unsupported perfo
 | Surface | What it demonstrates |
 |---|---|
 | [`src/spacex_autonomy/simulation.py`](src/spacex_autonomy/simulation.py) | Integrated deterministic simulation step. |
+| [`src/spacex_autonomy/mission_thread.py`](src/spacex_autonomy/mission_thread.py) | Weighted simulated GO/HOLD quorum with explicit conflict/veto reasons and a hash-bound receipt. |
 | [`src/hybrid_autonomy.py`](src/hybrid_autonomy.py) | Weighted mode policy and hysteresis without artificial flooring. |
 | [`go/autonomy/fsm.go`](go/autonomy/fsm.go) | Concurrency-safe phase and threshold simulation. |
 | [`tests/test_autonomy.py`](tests/test_autonomy.py) | Mode thresholds, hysteresis, invalid inputs, and compatibility output. |
@@ -105,6 +106,12 @@ This is a compact simulation estimator, not a navigation-grade estimator or a cl
 #### Control
 
 `PositionController` combines proportional position error and velocity damping, then clamps output to a configured normalized limit. When mode selection returns `MANUAL`, output is exactly zero and `enabled` is false.
+
+#### Mission-thread quorum
+
+`compile_mission_thread` takes caller-supplied simulated subsystem votes and preserves conflict instead of averaging it away. Too few sources, zero aggregate confidence, a high-confidence HOLD vote, or insufficient weighted GO support all produce `HOLD`. The result records veto sources, hold reasons, the weighted GO fraction, and a deterministic SHA-256 receipt.
+
+Evidence boundary: `LOCAL_SIMULATION_GO_HOLD_QUORUM_NO_FLIGHT_AUTHORITY`.
 
 #### Consensus
 
@@ -273,6 +280,8 @@ from spacex_autonomy import (
     Sensors,
     TelemetrySample,
     VehicleEstimate,
+    MissionVote,
+    compile_mission_thread,
     fuse_estimates,
     select_mode,
 )
