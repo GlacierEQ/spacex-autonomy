@@ -44,6 +44,7 @@ packages = ["src/spacex_autonomy", "scripts"]
 "README.md" = "scripts/README.md"
 
 [tool.pytest.ini_options]
+pythonpath = [".", "src"]
 addopts = "-q"
 testpaths = ["tests"]
 
